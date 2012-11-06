@@ -55,7 +55,7 @@ fprintf('\nAnalyzing data and generating figures, please wait...');
 %%% Set parameters for detection and display
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 smoothFactor = 10;
-emptyWellThresh = 100; % min % of frames with NOEP before well is considered empty 
+emptyWellThresh = 75; % min % of frames with NOEP before well is considered empty 
 maxNoiseThresh = noiseThresh*100; % max % of frames that TMOEP or NOEP can be detected before well is thrown out
 
 
@@ -71,9 +71,12 @@ end
 wellDiameterConv = containers.Map({96,48,24,12,6},{6.78,10.5,15.62,22.1,34.8});  %% 7/16 are optionally used for 96/24 wells
 %pix/frame * diameter(mm)/2*radius(pix) * frameRate frames/second
 if ~exist('mmConv')
-    mmConv = (wellDiameterConv(numWells)/(2*unscaledRadius))*frameRate;
+    mmConv = (wellDiameterConv(numWells)/(2*unscaledRadius));
 end
-fishVelocities = fishDistances*mmConv;
+if ~exist('convFact')
+    convFact = mmConv*frameRate;
+end
+fishVelocities = fishDistances*convFact;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Prepare output structures
@@ -207,7 +210,7 @@ for setNum = 1:length(fishSet)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%% Display group information
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    fprintf('\nVideo Frame Rate: %.2f\tConversion Factor: %.2f',frameRate, mmConv);
+    fprintf('\nVideo Frame Rate: %.2f\tDistance Conversion Factor: %.2f',frameRate, mmConv);
     fprintf('\n\n_________________ Group %s _________________________________________',num2str(setNum));
     fprintf('\n================ Well Information =================================');
     fprintf('\nEmpty wells:      %s', num2str(emptyWells));
@@ -259,7 +262,7 @@ for setNum = 1:length(fishSet)
         IndividOut = cat(1,IndividOut,{setNum,usableWells(i),individMVs(i),individMVSTDs(i),individAVs(i),individTPs(i),individADs(i),individRDs(i)});
     end
 
-    errorPlot = NOEP(usedWells)+TMOEP(usedWells);
+    errorPlot = NOEP+TMOEP;
 
     fishVelocities = oldFishVelocities;
     [numWells,numFrames] = size(fishVelocities);
@@ -310,7 +313,7 @@ fclose(fid);
 overview_graph(fishVelocities,numWells,numFrames,usedWells)
 %%% The error rate graph
 if (plotNoise)
-    errorRate_graph(errorPlot,usedWells,maxNoiseThresh)
+    errorRate_graph(errorPlot,1:numWells,maxNoiseThresh)
 end
 %%% The group mean velocity over time graph
 if (plotGMVOT)
